@@ -93,10 +93,11 @@ void setup()
     addr = (digitalRead(ADDR_1) & 0x1) | ((digitalRead(ADDR_2) & 0x1)<<1) | ((digitalRead(ADDR_3) & 0x1) << 2) |((digitalRead(ADDR_4) & 0x1)<< 3);
     data[0] = ipOffset + addr;
     ip = IPAddress(192, 168, 0, ipOffset + addr);
+    mac[5] = ipOffset + addr;
     Ethernet.begin(mac, ip);
     artnet.begin(); // waiting for Art-Net in default port
     // artnet.begin(net, subnet); // optionally you can set net and subnet here
-    artnet.subscribe(universeReceive, callback);
+    artnet.subscribe(0, callback);
 
     // cs_6_7.set_CS_AutocaL_Millis(0xFFFFFFFF); // turn off autocalibrate
     Serial.begin(115200);
