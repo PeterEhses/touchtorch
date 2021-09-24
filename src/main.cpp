@@ -8,6 +8,10 @@
 
 #include <FastLED.h>
 
+// wdt
+
+#include <avr/wdt.h>
+
 // FastLED
 #define NUM_LEDS 144
 CRGB leds[NUM_LEDS];
@@ -35,7 +39,6 @@ uint8_t mac[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB};
 // Set the static IP address to use if the DHCP fails to assign
 IPAddress ip;
 
-
 // CapacitiveSensor cs_6_7 = CapacitiveSensor(6, 7); // 10M resistor between pins 4 & 2, pin 2 is sensor pin, add a wire and or foil if desired
 // long senseData = 0;
 byte data[1];
@@ -44,6 +47,7 @@ unsigned long lastSend = 0;
 
 void callback(const uint8_t *data, const uint16_t size)
 {
+    wdt_reset(); // reset wdt only if artnet is active.
     if (size >= NUM_LEDS * 3)
     {
         // you can also use pre-defined callbacks
@@ -67,30 +71,37 @@ void callback(const uint8_t *data, const uint16_t size)
 
 void fastLedTest()
 {
-    for (size_t pixel = 0; pixel < NUM_LEDS; ++pixel)
-    {
-        leds[pixel].r = (pixel % 3 == 0) * 255;
-        leds[pixel].g = (pixel % 3 == 1) * 255;
-        leds[pixel].b = (pixel % 3 == 2) * 255;
-    }
+    // for (size_t pixel = 0; pixel < NUM_LEDS; ++pixel)
+    // {
+    //     leds[pixel].r = (pixel % 3 == 0) * 255;
+    //     leds[pixel].g = (pixel % 3 == 1) * 255;
+    //     leds[pixel].b = (pixel % 3 == 2) * 255;
+    // }
+    leds[0].r = 255;
+    leds[0].g = 255;
+    leds[0].b = 255;
     FastLED.show();
-    delay(500);
+    // delay(500);
 }
+
+// software reset
+
+void Reset_A(void) { asm volatile("jmp 0 \n"); }
 
 void setup()
 {
-    
+    wdt_enable(WDTO_4S);
     pinMode(ADDR_1, INPUT_PULLUP);
     pinMode(ADDR_2, INPUT_PULLUP);
     pinMode(ADDR_3, INPUT_PULLUP);
     pinMode(ADDR_4, INPUT_PULLUP);
-    
+
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     pinMode(LED_PIN, OUTPUT);
     analogWrite(LED_PIN, 0);
     FastLED.addLeds<WS2812, PIN_LED_DATA, GRB>(leds, NUM_LEDS);
-    fastLedTest();
-    addr = (digitalRead(ADDR_1) & 0x1) | ((digitalRead(ADDR_2) & 0x1)<<1) | ((digitalRead(ADDR_3) & 0x1) << 2) |((digitalRead(ADDR_4) & 0x1)<< 3);
+    // fastLedTest();
+    addr = (digitalRead(ADDR_1) & 0x1) | ((digitalRead(ADDR_2) & 0x1) << 1) | ((digitalRead(ADDR_3) & 0x1) << 2) | ((digitalRead(ADDR_4) & 0x1) << 3);
     data[0] = ipOffset + addr;
     ip = IPAddress(192, 168, 0, ipOffset + addr);
     mac[5] = ipOffset + addr;
@@ -107,6 +118,12 @@ void setup()
 
 void loop()
 {
+    // wdt_reset();
+    if (millis() > 300000) //300000
+    { // every 5min
+        Serial.println("RESET ...");
+        Reset_A();
+    }
     if (doShow)
     {
         // Serial.println("*");
